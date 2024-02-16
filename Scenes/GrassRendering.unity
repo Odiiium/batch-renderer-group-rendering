@@ -16732,57 +16732,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e8a8dbf4a016aff4280446bc59ba154e, type: 3}
---- !u!1 &837768249
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 837768251}
-  - component: {fileID: 837768250}
-  m_Layer: 0
-  m_Name: GrassRenderer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &837768250
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 837768249}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0e5dc8a85881c8847beb2c857aedfceb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _grassMesh: {fileID: -462981019419857548, guid: e8a8dbf4a016aff4280446bc59ba154e,
-    type: 3}
-  _grassMaterial: {fileID: 2100000, guid: d15b9d81c869fb146b855db51842e0ea, type: 2}
-  _terrainGenerator: {fileID: 1010731442}
-  _numInstances: 65536
-  _randomizePositionMultiplier: 0.3
-  minMaxHeight: {x: 0.81513554, y: 1.2320026}
---- !u!4 &837768251
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 837768249}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.095532, y: 0.2549892, z: 0.34701452}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &842716100 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e8a8dbf4a016aff4280446bc59ba154e,
@@ -19610,7 +19559,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80446e057ccc3e94ca5dfca8cfe0fb05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _terrainLength: 255
+  _terrainLength: 201
   _maxHeight: 2.5
   _scaleModifier: 0.2
   _seedScaleModifier: 8000
@@ -34887,6 +34836,59 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1348446707}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1807906799
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1807906801}
+  - component: {fileID: 1807906800}
+  m_Layer: 0
+  m_Name: RenderingProvider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1807906800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807906799}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5dccf00563666448809980e0ab96163, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _batchContexts:
+  - Mesh: {fileID: -462981019419857548, guid: e8a8dbf4a016aff4280446bc59ba154e, type: 3}
+    Material: {fileID: 2100000, guid: d15b9d81c869fb146b855db51842e0ea, type: 2}
+    BufferStride: 4
+    NumInstances: 40000
+    BufferFreeSpace: 96
+  _terrainGenerator: {fileID: 1010731442}
+  _randomizePositionMultiplier: 0.3
+  minMaxHeight: {x: 0.7750522, y: 1.248036}
+--- !u!4 &1807906801
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807906799}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -20.594778, y: 54.648537, z: 54.25452}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1809029451 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e8a8dbf4a016aff4280446bc59ba154e,
@@ -40904,7 +40906,7 @@ SceneRoots:
   - {fileID: 1650628042}
   - {fileID: 1829148135}
   - {fileID: 1010731443}
-  - {fileID: 837768251}
+  - {fileID: 1807906801}
   - {fileID: 336473114}
   - {fileID: 833864414}
   - {fileID: 2038915680}

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public static class SSDebug
+public static class SmartDebug 
 {
 	public static void Log(object message)
 	{
