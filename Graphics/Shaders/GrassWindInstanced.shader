@@ -3,13 +3,16 @@ Shader "Unlit/GrassWindInstanced"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _WindTexture("Wind Texture", 2D) = "white" {}
 
         [Space(20)]
-        _WindStrength ("Wind Strength", Float) = 0.1
-        _WindSpeed ("Wind Speed", Range(0,5)) = 1
+        _WindTexture("Wind Texture", 2D) = "white" {}
         _WindTextureTiling ("Wind Texture Tiling", Range(0,1)) = .1
         _PlaneSize ("Plane Size", Float) = 25 
+            
+        [Space(20)]
+        _WindStrength ("Wind Strength", Range(0,1)) = 0.1
+        _WindSpeed ("Wind Speed", Range(0,5)) = 1
+        _WindNoiseFrequency("Wind Noise Frequency", Range(100, 1000)) = 250
 
         [Space(20)]
         _AffectorStrength ("Affector Strength", Range(0, 1)) = .5
@@ -26,6 +29,10 @@ Shader "Unlit/GrassWindInstanced"
         _LowColor ("Low Color", Color) = (0,0,0,0)
         _MediumColor ("Medium Color", Color) = (0,0,0,0)
         _HighColor ("High Color", Color) = (0,0,0,0)
+        _LightColor ("Light Color", Color) = (1,1,1,1)
+
+        [Space(20)]
+        _WorldSpaceLightPos ("World Space Light Position", Vector) = (0,0,0,0)
 
         //[Space(20)]
         //_Glosiness ("Glosiness", Float) = 1
@@ -68,6 +75,7 @@ Shader "Unlit/GrassWindInstanced"
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float3 normal : NORMAL;
+                float4 ws_pos : TEXCOORD1;
 
                 #if UNITY_ANY_INSTANCING_ENABLED
                     uint instanceID : INSTANCEID_SEMANTIC;
@@ -77,12 +85,14 @@ Shader "Unlit/GrassWindInstanced"
             sampler2D _WindTexture;
             sampler2D _MainTex;
 
+
             CBUFFER_START(UnityPerMaterial)
 
                 half _WindStrength;
                 half _WindSpeed;
                 half _WindTextureTiling;
                 half _PlaneSize;
+                half _WindNoiseFrequency;
 
                 float4 _AffectorPosition;
                 half _AffectorStrength;
@@ -102,6 +112,9 @@ Shader "Unlit/GrassWindInstanced"
                 half4 _LowColor;
                 half4 _MediumColor;
                 half4 _HighColor;
+                half4 _LightColor;
+                half4 _WorldSpaceLightPos;
+
 
             CBUFFER_END
 
@@ -131,6 +144,11 @@ Shader "Unlit/GrassWindInstanced"
             		t * x * y + s * z, t * y * y + c, t * y * z - s * x,
             		t * x * z - s * y, t * y * z + s * x, t * z * z + c
             		);
+            }
+
+            float simpleWind(float3 ws_pos, float scaleModifier, float timeScale, float windWidth01)
+            {
+                return sin((ws_pos.x * ws_pos.z + ws_pos.y * scaleModifier) / scaleModifier + _Time.w * timeScale);
             }
             
             float randFloat(float2 seed)
@@ -176,7 +194,21 @@ Shader "Unlit/GrassWindInstanced"
                 float3x3 windRotationMatrix = AngleAxis3x3(UNITY_PI * windStrength, windVector);
                 float4 vertexResult = float4(mul(windRotationMatrix, vertex), 1);
             
-                return vertexResult;
+                return vertexResult - vertex;
+            }
+
+            float4 calculateSimpleWind(float4 vertex, v2f o, float4 worldPos)
+            {
+                float xWind = simpleWind(worldPos.xyz * 2, _WindNoiseFrequency, _WindSpeed, .6);
+                float zWind = simpleWind(worldPos.zyx * 2, _WindNoiseFrequency, _WindSpeed, .6);
+
+                float2 windVector = float2(xWind, zWind) * _WindStrength;
+                windVector *= lerp(0, 1, o.uv.y);
+
+                float3x3 windRotationMatrix = AngleAxis3x3(UNITY_PI * .5, float3(windVector.x, 1, windVector.y));
+                float4 result = float4(mul(windRotationMatrix, vertex), 1);
+
+                return result - vertex;
             }
             
             float getRandomGrassHeight(float seed)
@@ -188,15 +220,22 @@ Shader "Unlit/GrassWindInstanced"
                 return result;
             }
 
-            float getStaticGrassHeight()
-            {
-                return _StaticGrassHeight;
-            }
-
             void setRandomRotationY(float seed, float2 remapBounds, inout float4 vertex)
             {
                 float angle = 2 * UNITY_PI * remap(seed, remapBounds, float2(0,1)); 
                 vertex.xyz = mul(AngleAxis3x3(angle, float3(0,1,0)), vertex.xyz);
+            }
+
+            float3 recalculateNormals(appdata v, v2f o, float4 vertex_ws_pos)
+            {
+                float4 normal = float4(v.normal, 1);
+                float3 normal_ws_pos = mul(UNITY_MATRIX_M, v.normal);
+                setRandomRotationY(_StaticGrassHeight, float2(.815, 1.23), v.vertex);
+
+                normal += calculateSimpleWind(normal, o, vertex_ws_pos);
+                normal += max(0,calculateAffectionVector(v.uv.y, vertex_ws_pos));
+                
+                return normal;
             }
 
             v2f vert (appdata v)
@@ -207,19 +246,20 @@ Shader "Unlit/GrassWindInstanced"
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
 
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                o.normal = v.normal;
 
-                v.vertex.y *= getStaticGrassHeight();
-                float4 worldPos = mul(UNITY_MATRIX_M  , v.vertex);
+                v.vertex.y *= _StaticGrassHeight;
+                float4 worldPos = mul(UNITY_MATRIX_M, v.vertex);
                 float4 vertex = v.vertex; 
+
+                o.normal = recalculateNormals(v, o, worldPos);
 
                 setRandomRotationY(_StaticGrassHeight, float2(.815, 1.23), vertex);
 
-                vertex = calculateWind(vertex, o, worldPos);
+                vertex += calculateSimpleWind(vertex, o, worldPos);
                 vertex += calculateAffectionVector(v.uv.y, worldPos);
                 vertex.y = v.uv.y > .1 ? vertex.y : 0;
 
-
+                o.ws_pos = worldPos;
                 o.vertex = mul(UNITY_MATRIX_MVP , vertex);
                 return o;
             }
@@ -228,16 +268,16 @@ Shader "Unlit/GrassWindInstanced"
             {
                 half4 col = i.uv.y > .5 ?  lerp(_MediumColor, _HighColor, i.uv.y * 2 - 1) : lerp(_LowColor, _MediumColor, i.uv.y * 2);
 
-                //half4 lightColor = half4(1,1,1,1);//_LightColor0;
-                //half4 ws_pos = mul(unity_ObjectToWorld, i.vertex);
-                //half3 view = normalize(mul(UNITY_MATRIX_V  ,ws_pos));   
-                //half3 halfVector = normalize(_WorldSpaceLightPos0 + view);
-                //half NdotL = dot(_WorldSpaceLightPos0, i.normal);
-                //
-                //half4 light = NdotL + unity_AmbientSky * lightColor; 
-                //
+                half4 ws_pos = i.ws_pos;
 
-                return col; //* light;
+
+                half3 view = normalize(mul(UNITY_MATRIX_V,ws_pos));   
+                half3 halfVector = normalize(_WorldSpaceLightPos + view);
+                half NdotL = dot(_WorldSpaceLightPos, i.normal);
+                
+                half4 light = NdotL * _LightColor; 
+                
+                return col * light;
             }
             ENDHLSL
         }
