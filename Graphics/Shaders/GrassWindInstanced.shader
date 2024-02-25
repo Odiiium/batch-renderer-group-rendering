@@ -29,14 +29,11 @@ Shader "Unlit/GrassWindInstanced"
         _LowColor ("Low Color", Color) = (0,0,0,0)
         _MediumColor ("Medium Color", Color) = (0,0,0,0)
         _HighColor ("High Color", Color) = (0,0,0,0)
-        _LightColor ("Light Color", Color) = (1,1,1,1)
 
         [Space(20)]
+        _LightColor ("Light Color", Color) = (1,1,1,1)
         _WorldSpaceLightPos ("World Space Light Position", Vector) = (0,0,0,0)
-
-        //[Space(20)]
-        //_Glosiness ("Glosiness", Float) = 1
-        //_LightingIntensity ("Lighting Intensity", Float) = 1
+        _LightingIntensity ("Lighting Intensity", Range(0.1, 10)) = 1
     }
 
     SubShader
@@ -106,7 +103,6 @@ Shader "Unlit/GrassWindInstanced"
                 half _StaticGrassHeight;
 
                 half _LightingIntensity;
-                half _Glosiness;
 
                 half4 _MainTex_ST;
                 half4 _LowColor;
@@ -277,7 +273,7 @@ Shader "Unlit/GrassWindInstanced"
                 
                 half4 light = NdotL * _LightColor; 
                 
-                return col * light;
+                return col * pow(light, _LightingIntensity);
             }
             ENDHLSL
         }

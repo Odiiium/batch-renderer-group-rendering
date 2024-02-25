@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine;
 using System.Linq;
 
-public abstract class BatchRendererSystem : IBatchRendererSystem
+public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 {
 	protected BatchRenderingContext _context;
 
@@ -20,8 +20,17 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 
 	protected List<ShaderPropertyData> _properties;
 	protected List<int> _addresses;
+	protected uint[] culledData;
 
 	public BatchRenderingContext Context { get => _context; set => _context = value; }
+	public ICullingProvider CullingProvider { get => _cullingProvider; private set => _cullingProvider = value; }
+
+	public bool IsCullingInitialized { get => _cullingInitialized; set => _cullingInitialized = value; }
+	private bool _cullingInitialized;
+	public bool IsSystemInitialized { get => _systemInitialized; set => _systemInitialized = value; }
+	private bool _systemInitialized;
+
+	protected ICullingProvider _cullingProvider;
 
 	public BatchRendererSystem() { }
 
@@ -36,6 +45,27 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 	{
 		Context = context;
 		RegisterData();
+	}
+
+	public ICullingSystem RegisterCullingProvider<T>(ICullingContext context, Vector3[] positionsToCull, Vector3 meshBounds, int instancesCount) where T : unmanaged
+	{
+		culledData = new uint[instancesCount];
+
+		CullingProvider =
+			new CullingProvider(context).
+			FillPositionsBuffer(positionsToCull).
+			FillStatesBuffer<T>(instancesCount).
+			SetMeshBounds(meshBounds);
+
+		CullingProvider.ExecuteData();
+
+		return this;
+	}
+
+	public T[] CalculateData<T>(T[] data)
+	{
+		CullingProvider.PerformDispatch();
+		return CullingProvider.GetStates(data);
 	}
 
 	private void RegisterData()
@@ -57,7 +87,6 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 		PopulateBuffer(bufferAdresses);
 		NativeArray<MetadataValue> metadata = CreateMetadata(_properties, bufferAdresses);
 		_batchId = _batchRenderGroup.AddBatch(metadata, _instanceBuffer.bufferHandle);
-
 	}
 
 	protected virtual List<int> GetShadersAddresses(int freeSpace = 96)
@@ -97,14 +126,15 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 
 	public void Dispose()
 	{
-		ReleaseBuffer();
+		ReleaseData();
 	}
 
-	public void ReleaseBuffer()
+	public void ReleaseData()
 	{
 		_instanceBuffer.Release();
 		_instanceBuffer.Dispose();
 		_batchRenderGroup.Dispose();
+		CullingProvider.Dispose();
 	}
 
 	protected int BufferCountForInstances(int bytesPerInstance, int numInstances, int stride, int extraBytes = 0)
@@ -116,24 +146,35 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 
 	public unsafe JobHandle OnPerformCulling(BatchRendererGroup rendererGroup, BatchCullingContext cullingContext, BatchCullingOutput cullingOutput, IntPtr userContext)
 	{
+		if (!IsCullingInitialized && !IsSystemInitialized) return new JobHandle();
+
+		int visibleInstancesCount = Context.NumInstances;
+
+		if (IsCullingInitialized)
+		{
+			culledData = CalculateData(culledData);
+			visibleInstancesCount = culledData.Count(x => x == 1);
+			SmartDebug.Log(visibleInstancesCount);
+		}
+
 		int alignment = UnsafeUtility.AlignOf<long>();
 
 		var drawCommands = (BatchCullingOutputDrawCommands*)cullingOutput.drawCommands.GetUnsafePtr();
 
 		drawCommands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>(), alignment, Allocator.TempJob);
 		drawCommands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
-		drawCommands->visibleInstances = (int*)UnsafeUtility.Malloc(_context.NumInstances * sizeof(float), alignment, Allocator.TempJob);
+		drawCommands->visibleInstances = (int*)UnsafeUtility.Malloc(visibleInstancesCount * sizeof(float), alignment, Allocator.TempJob);
 		drawCommands->drawCommandPickingInstanceIDs = null;
 
 		drawCommands->drawCommandCount = 1;
 		drawCommands->drawRangeCount = 1;
-		drawCommands->visibleInstanceCount = _context.NumInstances;
+		drawCommands->visibleInstanceCount = visibleInstancesCount;
 
 		drawCommands->instanceSortingPositions = null;
 		drawCommands->instanceSortingPositionFloatCount = 0;
 
 		drawCommands->drawCommands[0].visibleOffset = 0;
-		drawCommands->drawCommands[0].visibleCount = (uint)_context.NumInstances;
+		drawCommands->drawCommands[0].visibleCount = (uint)visibleInstancesCount;
 		drawCommands->drawCommands[0].batchID = _batchId;
 		drawCommands->drawCommands[0].materialID = _materialId;
 		drawCommands->drawCommands[0].meshID = _meshId;
@@ -146,8 +187,24 @@ public abstract class BatchRendererSystem : IBatchRendererSystem
 		drawCommands->drawRanges[0].drawCommandsCount = 1;
 		drawCommands->drawRanges[0].filterSettings = new BatchFilterSettings() { renderingLayerMask = 0xffffffff };
 
-		for (int i = 0; i < _context.NumInstances; ++i)
-			drawCommands->visibleInstances[i] = i;
+		if (IsCullingInitialized)
+		{
+			int iteration = 0;
+			for (int i = 0; i < culledData.Length; ++i)
+			{
+				if (culledData[i] == 1)
+				{
+					drawCommands->visibleInstances[iteration] = i;
+					iteration++;
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < _context.NumInstances; i++)
+				drawCommands->visibleInstances[i] = i;
+		}
+
 
 		return new JobHandle();
 	}

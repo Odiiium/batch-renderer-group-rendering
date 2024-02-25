@@ -159,7 +159,7 @@ MonoBehaviour:
   _chunkCountY: 4
   _chunkSize: 25
   _lineVerticesCount: 128
-  _amplitude: 7
+  _amplitude: 7.5
   _scaleValue: 0.07
   _persistance: 2.5
   _octavesCount: 2
@@ -304,7 +304,7 @@ Camera:
   m_AllowMSAA: 1
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
-  m_OcclusionCulling: 1
+  m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
 --- !u!4 &1650628042
@@ -315,13 +315,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1650628039}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.13052616, y: 0, z: 0, w: 0.9914449}
-  m_LocalPosition: {x: 25, y: 4.5, z: 0}
+  m_LocalRotation: {x: 0.12059043, y: 0.37940952, z: -0.04995019, w: 0.9159757}
+  m_LocalPosition: {x: 0, y: 8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 15, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 15, y: 45, z: 0}
 --- !u!114 &1650628043
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -401,10 +401,16 @@ MonoBehaviour:
     BufferStride: 4
     NumInstances: 40000
     BufferFreeSpace: 96
+  _cullContexts:
+  - _camera: {fileID: 1650628041}
+    _shader: {fileID: 7200000, guid: 122543e4900d85d42830702cac754973, type: 3}
+    _kernelName: Cull
+    _groupSize: 64
+    _useSquaredComputing: 0
   _terrainGenerator: {fileID: 1010731442}
   _randomizePositionMultiplier: 0.3
-  minMaxHeight: {x: 0.7750522, y: 1.248036}
-  GrassZoneRange: {x: 0, y: 1000}
+  _minMaxHeight: {x: 0.80959964, y: 1.2069296}
+  _allowCulling: 0
 --- !u!4 &1807906801
 Transform:
   m_ObjectHideFlags: 0
