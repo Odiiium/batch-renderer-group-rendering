@@ -122,7 +122,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _InteractionDistance: 1.89
-    - _LightingIntensity: 0.9
+    - _LightingIntensity: 1
     - _MaximalGrassHeight: 0.903
     - _Metallic: 0
     - _MinimalGrassHeight: 0.576
@@ -154,9 +154,9 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _HighColor: {r: 0.9245283, g: 0.8320755, b: 0.9230433, a: 0}
-    - _LightColor: {r: 0.8396226, g: 0.8020386, b: 0.5734781, a: 1}
-    - _LowColor: {r: 0.068648346, g: 0.3773585, b: 0.040583815, a: 0}
-    - _MediumColor: {r: 0.3954432, g: 0.4716981, b: 0.33552864, a: 0}
+    - _LightColor: {r: 0.8773585, g: 0.85260063, b: 0.69029903, a: 1}
+    - _LowColor: {r: 0.048540402, g: 0.254717, b: 0.027394075, a: 0}
+    - _MediumColor: {r: 0.5885556, g: 0.62352943, b: 0.41960785, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _WorldSpaceLightPos: {r: 1.95, g: -0.6, b: -1.31, a: 0}
+    - _WorldSpaceLightPos: {r: 1.95, g: -0.6, b: -1.8, a: 0}
   m_BuildTextureStacks: []

@@ -1,10 +1,17 @@
 #pragma kernel Cull
 
-RWStructuredBuffer<float3> Positions;
-RWStructuredBuffer<uint> States;
+struct RendererChunk
+{
+    int Id;
+    float2 Position;
+    int PositionsCount;
+    int IsOnView;
+};
+
+RWStructuredBuffer<RendererChunk> Chunks;
 float4x4 CameraViewProjection;
 float4 CameraPosition;
-float3 MeshBounds;
+float3 ChunkBounds;
 
 float SCREEN_ALLOWED_SIZE;
 float Z_ALLOWED_SIZE;
@@ -30,9 +37,13 @@ bool IsOnView(float4 position)
 void Cull(uint3 id : SV_DispatchThreadID)
 {   
     int ID = id.x;
-    float4 lowerPosition = float4(Positions[ID] - MeshBounds / 2, 0);
-    float4 higherPosition = float4(Positions[ID] + MeshBounds / 2, 0);
-    States[ID] = IsOnView(lowerPosition) && IsOnView(higherPosition)  ? 1 : 0; 
+    
+    float4 chunkBounds = float4(ChunkBounds.x, 0, ChunkBounds.z, 0) * .5f;
+    
+    float4 lowerPosition = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) - chunkBounds;
+    float4 higherPosition = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) + chunkBounds;
+    
+    Chunks[ID].IsOnView = IsOnView(lowerPosition) || IsOnView(higherPosition) ? 1 : 0;
 }
 
 

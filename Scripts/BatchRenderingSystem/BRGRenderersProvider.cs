@@ -1,11 +1,7 @@
 ﻿using Sirenix.OdinInspector;
-using Sirenix.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -13,9 +9,10 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 {
 	[FoldoutGroup("Rendering settings")]
 	[SerializeField] private List<BatchRenderingContext> _batchContexts;
+	[FoldoutGroup("Rendering settings")]
 	[SerializeField] private List<CullingContext> _cullContexts;
 	[SerializeField] private TerrainGenerator _terrainGenerator;
-	[SerializeField] private float _randomizePositionMultiplier;
+	[SerializeField] private int _chunksInLineCount;
 
 	[FoldoutGroup("Grass Settings")]
 	[MinMaxSlider(0, 2)][SerializeField] private Vector2 _minMaxHeight;
@@ -24,6 +21,7 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 	private List<Vector3> _grassPositions;
 
 	private BatchRendererSystemFactory _factory;
+	private BatchRendererPreprocessor _renderingPreProcessor;
 
 	private List<IBatchRendererSystem> _renderSystems;
 	private List<ICullingSystem> _cullingSystems;
@@ -34,6 +32,7 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 		_grassPositions = new List<Vector3>();
 		_renderSystems = new List<IBatchRendererSystem>();
 		_cullingSystems = new List<ICullingSystem>();
+		_renderingPreProcessor = new BatchRendererPreprocessor();
 
 		_terrainGenerator.onTerrainGenerated += SetupRenderers;
 	}
@@ -58,18 +57,22 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 
 		_batchContexts[0].NumInstances = _grassPositions.Count();
 
-		Matrix4x4[] matrices = FillMatricesByPositions(_grassPositions, _batchContexts[0].NumInstances);
+		_renderingPreProcessor.SetSettings(
+			new ChunkPartitionSettings(_chunksInLineCount, _terrainGenerator.GetTerrainSize(), _terrainGenerator.GetAmplitude()));
 
+		Vector3[] positions = _renderingPreProcessor.GroupPositions(_grassPositions.ToArray());
+		RendererChunk[] chunks = _renderingPreProcessor.ComputeChunks();
+		Vector3 chunksBounds = _renderingPreProcessor.GetChunkBounds();
+
+		Matrix4x4[] matrices = FillMatricesByPositions(positions.ToList(), _batchContexts[0].NumInstances);
 		PackedMatrix[] objectToWorldPackedMatrices = GetPackedMatrices(matrices);
-
 		PackedMatrix[] worldToObjectPackedMatrices = GetPackedMatrices(matrices.Select(x => x.inverse).ToArray()).ToArray();
-
 		float[] heights = Enumerable.Range(0, _batchContexts[0].NumInstances).Select(x => Random.Range(_minMaxHeight.x, _minMaxHeight.y)).ToArray();
 
 		BRGGrassRenderingSystem grassRenderingSystem = _factory.CreateBatchRendererSystem<BRGGrassRenderingSystem>(_batchContexts[0]);
 
 		ICullingSystem rendererSystem = grassRenderingSystem.
-			RegisterCullingProvider<uint>(_cullContexts[0], _grassPositions.ToArray(), Vector3.one, _batchContexts[0].NumInstances);
+			RegisterCullingProvider<uint>(_cullContexts[0], chunks, chunksBounds, _batchContexts[0].NumInstances);
 
 		IBatchRendererSystem grassRenderer = grassRenderingSystem.
 			AddShaderData<PackedMatrix>("unity_ObjectToWorld", 0x80000000, objectToWorldPackedMatrices).
@@ -96,8 +99,7 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 
 		for (int i = 0; i < count; i++)
 		{
-			Vector2 random = Random.insideUnitCircle * _randomizePositionMultiplier;
-			point = new Vector3(positions[i].x + random.x, positions[i].y, positions[i].z + random.y);
+			point = new Vector3(positions[i].x, positions[i].y, positions[i].z);
 			resultMatrices[i] = Matrix4x4.Translate(point);
 		}
 

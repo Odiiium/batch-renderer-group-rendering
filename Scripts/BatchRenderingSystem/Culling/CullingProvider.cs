@@ -4,8 +4,7 @@ using UnityEngine;
 
 public class CullingProvider : ICullingProvider
 {
-	private ComputeBuffer _positionsBuffer;
-	private ComputeBuffer _statesBuffer;
+	private ComputeBuffer _chunkBuffer;
 
 	private readonly Camera _mainCamera;
 	private readonly ComputeShader _shader;
@@ -16,13 +15,12 @@ public class CullingProvider : ICullingProvider
 
 	private const string CAMERA_VP_MATRIX_NAME = "CameraViewProjection";
 	private const string CAMERA_POSITION_NAME = "CameraPosition";
-	private const string MESH_BOUNDS_NAME = "MeshBounds";
-	private const string POSITIONS_BUFFER_NAME = "Positions";
-	private const string STATES_BUFFER_NAME = "States";
+	private const string CHUNK_BOUNDS_NAME = "ChunkBounds";
+	private const string CHUNK_BUFFER_NAME = "Chunks";
 	private const string SCREEN_ALLOWED_SIZE_NAME = "SCREEN_ALLOWED_SIZE";
 	private const string Z_ALLOWED_SIZE_NAME = "Z_ALLOWED_SIZE";
 
-	private const float SCREEN_ALLOWED_SIZE = 1.3f;
+	private const float SCREEN_ALLOWED_SIZE = 1.25f;
 	private const float Z_ALLOWED_SIZE = -1f;
 
 	public CullingProvider(ICullingContext context)
@@ -34,44 +32,33 @@ public class CullingProvider : ICullingProvider
 		_useSquaredComputing = context.UseSquaredComputing;
 	}
 
-	public unsafe ICullingProvider FillPositionsBuffer(Vector3[] positionsToCull)
+	public unsafe ICullingProvider FillChunksBuffer(RendererChunk[] chunksToCull)
 	{
-		_positionsBuffer = new ComputeBuffer(positionsToCull.Length, sizeof(Vector3));
-		_positionsBuffer.SetData(positionsToCull);
+		_instancesCount = chunksToCull.Count();
+		_chunkBuffer = new ComputeBuffer(chunksToCull.Length, sizeof(RendererChunk));
+		_chunkBuffer.SetData(chunksToCull);
 		return this;
 	}
 
-	public unsafe ICullingProvider FillStatesBuffer<T>(int instancesCount) where T : unmanaged
+	public ICullingProvider SetChunkBounds(Vector3 chunkBounds)
 	{
-		this._instancesCount = instancesCount;
-		_statesBuffer = new ComputeBuffer(instancesCount, sizeof(T));
-		T[] states = new T[instancesCount];
-		Array.Fill(states, default(T));
-		_statesBuffer.SetData(states);
-		return this;
-	}
-
-	public ICullingProvider SetMeshBounds(Vector3 meshBounds)
-	{
-		_shader.SetVector(MESH_BOUNDS_NAME, meshBounds);
+		_shader.SetVector(CHUNK_BOUNDS_NAME, chunkBounds);
 		return this;
 	}
 
 	public void ExecuteData()
 	{
-		_shader.SetBuffer(_cullKernelIndex, POSITIONS_BUFFER_NAME, _positionsBuffer);
-		_shader.SetBuffer(_cullKernelIndex, STATES_BUFFER_NAME, _statesBuffer);
+		_shader.SetBuffer(_cullKernelIndex, CHUNK_BUFFER_NAME, _chunkBuffer);
 		_shader.SetMatrix(CAMERA_VP_MATRIX_NAME, _mainCamera.projectionMatrix * _mainCamera.transform.worldToLocalMatrix);
 		_shader.SetVector(CAMERA_POSITION_NAME, _mainCamera.transform.position);
 		_shader.SetFloat(SCREEN_ALLOWED_SIZE_NAME, SCREEN_ALLOWED_SIZE);
 		_shader.SetFloat(Z_ALLOWED_SIZE_NAME, Z_ALLOWED_SIZE);
 	}
 
-
-	public T[] GetStates<T>(T[] states)
+	public RendererChunk[] GetChunks(RendererChunk[] chunks)
 	{
-		_statesBuffer.GetData(states);
-		return states;
+		_chunkBuffer.GetData(chunks);
+		return chunks;
 	}
 
 	public void PerformDispatch()
@@ -83,7 +70,7 @@ public class CullingProvider : ICullingProvider
 
 	public void Dispose()
 	{
-		_positionsBuffer.Dispose();
-		_statesBuffer.Dispose();
+		_chunkBuffer.Dispose();
 	}
 }
+

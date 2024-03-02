@@ -136,7 +136,7 @@ GameObject:
   - component: {fileID: 1010731445}
   - component: {fileID: 1010731444}
   m_Layer: 0
-  m_Name: MeshGenerator
+  m_Name: TerrainGenerator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -155,10 +155,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _material: {fileID: 2100000, guid: 8a0a71193864a224893a8179867ebf9c, type: 2}
+  _isTerrainCentralized: 0
   _chunkCountX: 4
   _chunkCountY: 4
   _chunkSize: 25
-  _lineVerticesCount: 128
+  _lineVerticesCount: 85
   _amplitude: 7.5
   _scaleValue: 0.07
   _persistance: 2.5
@@ -316,7 +317,7 @@ Transform:
   m_GameObject: {fileID: 1650628039}
   serializedVersion: 2
   m_LocalRotation: {x: 0.12059043, y: 0.37940952, z: -0.04995019, w: 0.9159757}
-  m_LocalPosition: {x: 0, y: 8, z: 0}
+  m_LocalPosition: {x: 50, y: 8, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -406,11 +407,12 @@ MonoBehaviour:
     _shader: {fileID: 7200000, guid: 122543e4900d85d42830702cac754973, type: 3}
     _kernelName: Cull
     _groupSize: 64
-    _useSquaredComputing: 0
+    _useSquaredComputing: 1
   _terrainGenerator: {fileID: 1010731442}
-  _randomizePositionMultiplier: 0.3
+  _randomizePositionMultiplier: 0
+  _chunksInLineCount: 16
   _minMaxHeight: {x: 0.80959964, y: 1.2069296}
-  _allowCulling: 0
+  _allowCulling: 1
 --- !u!4 &1807906801
 Transform:
   m_ObjectHideFlags: 0

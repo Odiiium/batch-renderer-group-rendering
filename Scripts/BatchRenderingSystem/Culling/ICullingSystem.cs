@@ -2,8 +2,8 @@
 
 public interface ICullingSystem
 {
-	public ICullingSystem RegisterCullingProvider<T>(ICullingContext context, Vector3[] positionsToCull, Vector3 meshBounds, int instancesCount) where T : unmanaged;
-	public T[] CalculateData<T>(T[] data);
+	public ICullingSystem RegisterCullingProvider<T>(ICullingContext context, RendererChunk[] chunksToCull, Vector3 meshBounds, int instancesCount) where T : unmanaged;
+	public RendererChunk[] CalculateData(RendererChunk[] data);
 	public ICullingProvider CullingProvider { get; }
 
 	public bool IsCullingInitialized { get; set; }

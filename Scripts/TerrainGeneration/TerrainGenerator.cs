@@ -12,6 +12,7 @@ public class TerrainGenerator : MonoBehaviour
 	[SerializeField] private Material _material;
 
 	[Header("Chunk settings")]
+	[SerializeField] private bool _isTerrainCentralized;
 	[SerializeField] private int _chunkCountX, _chunkCountY;
 	[SerializeField] private float _chunkSize;
 	[SerializeField][Range(1, 256)] private int _lineVerticesCount;
@@ -105,6 +106,7 @@ public class TerrainGenerator : MonoBehaviour
 		float vertexDistance = _chunkSize / (_lineVerticesCount - 1);
 		float height, xPos, yPos = 0;
 		Vector2 posVector = Vector2.zero;
+		Vector3 centerOffset = new Vector3(_chunkCountX, 0, _chunkCountY) * _chunkSize * -.5f;
 
 		for (int i = 0, v = 0; i < _lineVerticesCount; i++)
 			for (int j = 0; j < _lineVerticesCount; j++)
@@ -117,6 +119,10 @@ public class TerrainGenerator : MonoBehaviour
 				height = _noiseGenerator.CalculateNoiseByOctaves(posVector, _noiseOctaves);
 
 				vertices[v] = new Vector3(xPos, height, yPos);
+
+				if (_isTerrainCentralized)
+					vertices[v] += centerOffset;
+
 				v++;
 			}
 		return vertices;
@@ -160,6 +166,10 @@ public class TerrainGenerator : MonoBehaviour
 	}
 
 	public List<Chunk> GetChunks() => _chunks;
+
+	public Vector2 GetTerrainSize() => new Vector2(_chunkSize * _chunkCountX, _chunkSize * _chunkCountY);
+
+	public float GetAmplitude() => _amplitude;
 }
 
 [System.Serializable]
