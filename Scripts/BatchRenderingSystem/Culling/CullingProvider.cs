@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using UnityEngine;
 
 public class CullingProvider : ICullingProvider
@@ -20,11 +19,13 @@ public class CullingProvider : ICullingProvider
 	private const string SCREEN_ALLOWED_SIZE_NAME = "SCREEN_ALLOWED_SIZE";
 	private const string Z_ALLOWED_SIZE_NAME = "Z_ALLOWED_SIZE";
 
-	private const float SCREEN_ALLOWED_SIZE = 1.25f;
-	private const float Z_ALLOWED_SIZE = -1f;
+	private const float SCREEN_ALLOWED_SIZE = 1.3f;
+	private const float Z_ALLOWED_SIZE = -2f;
 
 	public CullingProvider(ICullingContext context)
 	{
+		if (context == null) return;
+
 		_mainCamera = context.Camera;
 		_shader = context.ComputeShader;
 		_cullKernelIndex = context.ComputeShader.FindKernel(context.KernelName);
@@ -70,7 +71,7 @@ public class CullingProvider : ICullingProvider
 
 	public void Dispose()
 	{
-		_chunkBuffer.Dispose();
+		_chunkBuffer?.Dispose();
 	}
 }
 

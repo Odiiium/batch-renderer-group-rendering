@@ -2,7 +2,7 @@
 
 public interface ICullingSystem
 {
-	public ICullingSystem RegisterCullingProvider<T>(ICullingContext context, RendererChunk[] chunksToCull, Vector3 meshBounds, int instancesCount) where T : unmanaged;
+	public ICullingSystem RegisterCullingProvider(ICullingContext context, RendererChunk[] chunksToCull, Vector3 meshBounds, int instancesCount);
 	public RendererChunk[] CalculateData(RendererChunk[] data);
 	public ICullingProvider CullingProvider { get; }
 

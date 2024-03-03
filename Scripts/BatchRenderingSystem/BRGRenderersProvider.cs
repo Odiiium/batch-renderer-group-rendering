@@ -18,7 +18,9 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 	[MinMaxSlider(0, 2)][SerializeField] private Vector2 _minMaxHeight;
 	[SerializeField] private bool _allowCulling;
 
-	private List<Vector3> _grassPositions;
+	private List<Vector3> _terrainPositions;
+	private RendererChunk[] _rendererChunks;
+	private Vector3 _chunkBounds;
 
 	private BatchRendererSystemFactory _factory;
 	private BatchRendererPreprocessor _renderingPreProcessor;
@@ -29,17 +31,41 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 	private void Awake()
 	{
 		_factory = new BatchRendererSystemFactory();
-		_grassPositions = new List<Vector3>();
+		_terrainPositions = new List<Vector3>();
 		_renderSystems = new List<IBatchRendererSystem>();
 		_cullingSystems = new List<ICullingSystem>();
 		_renderingPreProcessor = new BatchRendererPreprocessor();
 
-		_terrainGenerator.onTerrainGenerated += SetupRenderers;
+		_terrainGenerator.onTerrainGenerated += PerformBatchRendering;
 	}
 
 	private void OnDestroy()
 	{
 		Dispose();
+	}
+
+
+	private void PerformBatchRendering()
+	{
+		_terrainPositions = _terrainGenerator.
+			GetChunks().
+			SelectMany(x => x.MeshFilter.mesh.vertices).
+			ToList();
+
+		_batchContexts[0].NumInstances = _terrainPositions.Count;
+
+		ExecutePreprocessor();
+		SetupRenderers();
+	}
+
+	private void ExecutePreprocessor()
+	{
+		_renderingPreProcessor.SetSettings(
+			new ChunkPartitionSettings(_chunksInLineCount, _terrainGenerator.GetTerrainSize(), _terrainGenerator.GetAmplitude()));
+
+		_terrainPositions = _renderingPreProcessor.GroupPositions(_terrainPositions.ToArray()).ToList();
+		_rendererChunks = _renderingPreProcessor.ComputeChunks();
+		_chunkBounds = _renderingPreProcessor.GetChunkBounds();
 	}
 
 	public void SetupRenderers()
@@ -50,21 +76,9 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 
 	private unsafe void SetupGrassRenderer()
 	{
-		_grassPositions = _terrainGenerator.
-			GetChunks().
-			SelectMany(x => x.MeshFilter.mesh.vertices).
-			ToList();
+		_batchContexts[0].NumInstances = _terrainPositions.Count();
 
-		_batchContexts[0].NumInstances = _grassPositions.Count();
-
-		_renderingPreProcessor.SetSettings(
-			new ChunkPartitionSettings(_chunksInLineCount, _terrainGenerator.GetTerrainSize(), _terrainGenerator.GetAmplitude()));
-
-		Vector3[] positions = _renderingPreProcessor.GroupPositions(_grassPositions.ToArray());
-		RendererChunk[] chunks = _renderingPreProcessor.ComputeChunks();
-		Vector3 chunksBounds = _renderingPreProcessor.GetChunkBounds();
-
-		Matrix4x4[] matrices = FillMatricesByPositions(positions.ToList(), _batchContexts[0].NumInstances);
+		Matrix4x4[] matrices = FillMatricesByPositions(_terrainPositions.ToList(), _batchContexts[0].NumInstances);
 		PackedMatrix[] objectToWorldPackedMatrices = GetPackedMatrices(matrices);
 		PackedMatrix[] worldToObjectPackedMatrices = GetPackedMatrices(matrices.Select(x => x.inverse).ToArray()).ToArray();
 		float[] heights = Enumerable.Range(0, _batchContexts[0].NumInstances).Select(x => Random.Range(_minMaxHeight.x, _minMaxHeight.y)).ToArray();
@@ -72,7 +86,7 @@ public class BRGRenderersProvider : MonoBehaviour, IDisposable
 		BRGGrassRenderingSystem grassRenderingSystem = _factory.CreateBatchRendererSystem<BRGGrassRenderingSystem>(_batchContexts[0]);
 
 		ICullingSystem rendererSystem = grassRenderingSystem.
-			RegisterCullingProvider<uint>(_cullContexts[0], chunks, chunksBounds, _batchContexts[0].NumInstances);
+			RegisterCullingProvider(_cullContexts[0], _rendererChunks, _chunkBounds, _batchContexts[0].NumInstances);
 
 		IBatchRendererSystem grassRenderer = grassRenderingSystem.
 			AddShaderData<PackedMatrix>("unity_ObjectToWorld", 0x80000000, objectToWorldPackedMatrices).

@@ -20,7 +20,7 @@ public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 
 	protected List<ShaderPropertyData> _properties;
 	protected List<int> _addresses;
-	protected uint[] culledData;
+	protected RendererChunk[] culledChunks;
 
 	public BatchRenderingContext Context { get => _context; set => _context = value; }
 	public ICullingProvider CullingProvider { get => _cullingProvider; private set => _cullingProvider = value; }
@@ -47,25 +47,24 @@ public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 		RegisterData();
 	}
 
-	public ICullingSystem RegisterCullingProvider<T>(ICullingContext context, Vector3[] positionsToCull, Vector3 meshBounds, int instancesCount) where T : unmanaged
+	public ICullingSystem RegisterCullingProvider(ICullingContext context, RendererChunk[] chunksToCull, Vector3 chunkBounds, int instancesCount)
 	{
-		culledData = new uint[instancesCount];
+		culledChunks = chunksToCull;
 
 		CullingProvider =
 			new CullingProvider(context).
-			FillPositionsBuffer(positionsToCull).
-			FillStatesBuffer<T>(instancesCount).
-			SetMeshBounds(meshBounds);
-
+			FillChunksBuffer(chunksToCull).
+			SetChunkBounds(chunkBounds);
+		
 		CullingProvider.ExecuteData();
 
 		return this;
 	}
 
-	public T[] CalculateData<T>(T[] data)
+	public RendererChunk[] CalculateData(RendererChunk[] data)
 	{
 		CullingProvider.PerformDispatch();
-		return CullingProvider.GetStates(data);
+		return CullingProvider.GetChunks(data);
 	}
 
 	private void RegisterData()
@@ -148,14 +147,7 @@ public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 	{
 		if (!IsCullingInitialized && !IsSystemInitialized) return new JobHandle();
 
-		int visibleInstancesCount = Context.NumInstances;
-
-		if (IsCullingInitialized)
-		{
-			culledData = CalculateData(culledData);
-			visibleInstancesCount = culledData.Count(x => x == 1);
-			SmartDebug.Log(visibleInstancesCount);
-		}
+		PerformChunksCulling(out int visibleInstancesCount);
 
 		int alignment = UnsafeUtility.AlignOf<long>();
 
@@ -187,16 +179,39 @@ public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 		drawCommands->drawRanges[0].drawCommandsCount = 1;
 		drawCommands->drawRanges[0].filterSettings = new BatchFilterSettings() { renderingLayerMask = 0xffffffff };
 
+		SetVisibleInstances(drawCommands);
+
+		return new JobHandle();
+	}
+
+	protected void PerformChunksCulling(out int visibleInstancesCount)
+	{
+		visibleInstancesCount = Context.NumInstances;
+
 		if (IsCullingInitialized)
 		{
-			int iteration = 0;
-			for (int i = 0; i < culledData.Length; ++i)
+			culledChunks = CalculateData(culledChunks);
+			visibleInstancesCount = culledChunks.Where(x => x.IsOnView > 0).Sum(x => x.PositionsCount);
+		}
+	}
+
+	protected unsafe void SetVisibleInstances(BatchCullingOutputDrawCommands* drawCommands)
+	{
+		if (IsCullingInitialized)
+		{
+			int positionsOnBuffer = 0;
+			int visibleInstances = 0;
+
+			for (int i = 0; i < culledChunks.Length; i++)
 			{
-				if (culledData[i] == 1)
+				if (culledChunks[i].IsOnView > 0)
 				{
-					drawCommands->visibleInstances[iteration] = i;
-					iteration++;
+					for (int j = 0; j < culledChunks[i].PositionsCount; j++)
+						drawCommands->visibleInstances[j + visibleInstances] = j + positionsOnBuffer;
+
+					visibleInstances += culledChunks[i].PositionsCount;
 				}
+				positionsOnBuffer += culledChunks[i].PositionsCount;
 			}
 		}
 		else
@@ -204,8 +219,5 @@ public abstract class BatchRendererSystem : IBatchRendererSystem, ICullingSystem
 			for (int i = 0; i < _context.NumInstances; i++)
 				drawCommands->visibleInstances[i] = i;
 		}
-
-
-		return new JobHandle();
 	}
 }
