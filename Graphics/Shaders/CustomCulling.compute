@@ -38,12 +38,14 @@ void Cull(uint3 id : SV_DispatchThreadID)
 {   
     int ID = id.x;
     
-    float4 chunkBounds = float4(ChunkBounds.x, 0, ChunkBounds.z, 0) * .5f;
+    float4 chunkBounds = float4(ChunkBounds.x, ChunkBounds.y, ChunkBounds.z, 0) * .5f;
     
-    float4 lowerPosition = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) - chunkBounds;
-    float4 higherPosition = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) + chunkBounds;
+    float4 leftBackpos = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) - chunkBounds;
+    float4 rightForwardPos = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) + chunkBounds;
+    float4 rightBackPos = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) + float4(chunkBounds.x, 0, -chunkBounds.z, 0);
+    float4 leftForwardPos = float4(Chunks[ID].Position.x, 0, Chunks[ID].Position.y, 0) + float4(-chunkBounds.x, 0, chunkBounds.z, 0);
     
-    Chunks[ID].IsOnView = IsOnView(lowerPosition) || IsOnView(higherPosition) ? 1 : 0;
+    Chunks[ID].IsOnView = IsOnView(leftBackpos) || IsOnView(rightForwardPos) || IsOnView(rightBackPos) || IsOnView(leftForwardPos) ? 1 : 0;
 }
 
 
